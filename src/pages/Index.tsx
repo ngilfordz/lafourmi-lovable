@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import LoadingSpiral from '@/components/LoadingSpiral';
-import ModernNavigation from '@/components/ModernNavigation';
+import LimelightNavigation from '@/components/LimelightNavigation';
 import AnimatedHeroSection from '@/components/AnimatedHeroSection';
-import PremiumProductGrid from '@/components/PremiumProductGrid';
+import EnhancedProductCategories from '@/components/EnhancedProductCategories';
 import AboutGallery from '@/components/AboutGallery';
 import TestimonialsSection from '@/components/TestimonialsSection';
 import DeliveryTracker from '@/components/DeliveryTracker';
 import ContactSection from '@/components/ContactSection';
 import AnimatedFooter from '@/components/AnimatedFooter';
-import BackgroundPaths from '@/components/BackgroundPaths';
+import { BackgroundPaths } from '@/components/ui/background-paths';
 import PremiumSpotifyPlayer from '@/components/PremiumSpotifyPlayer';
 import CartSidebar from '@/components/CartSidebar';
 import LoginModal from '@/components/LoginModal';
 import ScrollingProductCards from '@/components/ScrollingProductCards';
+import { useCart } from '@/App';
 
 interface CartItem {
   id: string;
@@ -26,48 +27,40 @@ interface CartItem {
 }
 
 const Index = () => {
-  const [isLoading, setIsLoading] = useState(true);
-  const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showBackgroundPaths, setShowBackgroundPaths] = useState(false);
+  const { setTheme } = useTheme();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  
+  const { cartItems, updateCartQuantity, getTotalItems } = useCart();
 
   useEffect(() => {
+    setTheme('dark');
+    
     const timer = setTimeout(() => {
-      setIsLoading(false);
+      setLoading(false);
+      // Show background paths shortly after loading
+      setTimeout(() => setShowBackgroundPaths(true), 1000);
     }, 2000);
 
     return () => clearTimeout(timer);
-  }, []);
+  }, [setTheme]);
 
-  const addToCart = (product: any, quantity: number) => {
-    setCartItems(prev => {
-      const existing = prev.find(item => item.id === product.id);
-      if (existing) {
-        return prev.map(item =>
-          item.id === product.id
-            ? { ...item, quantity: item.quantity + quantity }
-            : item
-        );
-      } else {
-        return [...prev, { ...product, quantity }];
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      
+      // Show background paths after scrolling just 200px
+      if (scrollY > 200 && !showBackgroundPaths) {
+        setShowBackgroundPaths(true);
       }
-    });
-  };
+    };
 
-  const updateCartQuantity = (id: string, quantity: number) => {
-    if (quantity === 0) {
-      setCartItems(prev => prev.filter(item => item.id !== id));
-    } else {
-      setCartItems(prev =>
-        prev.map(item =>
-          item.id === id ? { ...item, quantity } : item
-        )
-      );
-    }
-  };
-
-  const getTotalItems = () => cartItems.reduce((sum, item) => sum + item.quantity, 0);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [showBackgroundPaths]);
 
   const handleLogin = (username: string, password: string) => {
     if (username === 'Elie' && password === 'lafourmi') {
@@ -80,7 +73,8 @@ const Index = () => {
   const handleCheckout = () => {
     if (isLoggedIn) {
       alert('Thank you for your purchase! Your order has been confirmed.');
-      setCartItems([]);
+      // Clear cart by setting all items to 0 quantity
+      cartItems.forEach(item => updateCartQuantity(item.id, 0));
       setIsCartOpen(false);
     } else {
       setIsCartOpen(false);
@@ -88,18 +82,17 @@ const Index = () => {
     }
   };
 
-  if (isLoading) {
-    return <LoadingSpiral isLoading={isLoading} />;
+  if (loading) {
+    return <LoadingSpiral isLoading={loading} />;
   }
 
   return (
-    <div className="min-h-screen bg-background relative overflow-x-hidden">
-      {/* Background animation - always visible */}
+    <div className="min-h-screen bg-background relative">
+      {/* Background Paths - Always visible after load/scroll */}
       <BackgroundPaths />
       
       {/* Navigation */}
-      <ModernNavigation 
-        cartItems={getTotalItems()}
+      <LimelightNavigation 
         onCartClick={() => setIsCartOpen(true)}
         onLoginClick={() => setIsLoginOpen(true)}
       />
@@ -123,22 +116,36 @@ const Index = () => {
         onLogin={handleLogin}
       />
       
-      {/* Main content */}
-      <main className="relative z-10">
-        <AnimatedHeroSection />
-        <ScrollingProductCards />
-        <PremiumProductGrid 
-          onAddToCart={addToCart}
-          cart={cartItems.reduce((acc, item) => ({ ...acc, [item.id]: item.quantity }), {})}
-        />
-        <AboutGallery />
-        <TestimonialsSection />
-        <DeliveryTracker />
-        <ContactSection />
-      </main>
+      {/* Hero Section with Lamp Background */}
+      <AnimatedHeroSection />
       
-      {/* Footer */}
-      <AnimatedFooter />
+      {/* Scrolling Cards Section - About La Fourmi */}
+      <ScrollingProductCards />
+      
+      {/* Main Content - with transparent/semi-transparent backgrounds */}
+      <div className="relative z-10">
+        <section id="products" className="bg-background/60 backdrop-blur-sm">
+          <EnhancedProductCategories />
+        </section>
+        
+        <section className="bg-background/60 backdrop-blur-sm">
+          <AboutGallery />
+        </section>
+        
+        <section className="bg-background/60 backdrop-blur-sm">
+          <TestimonialsSection />
+        </section>
+        
+        <section className="bg-background/60 backdrop-blur-sm">
+          <DeliveryTracker />
+        </section>
+        
+        <section id="contact" className="bg-background/60 backdrop-blur-sm">
+          <ContactSection />
+        </section>
+        
+        <AnimatedFooter />
+      </div>
     </div>
   );
 };
